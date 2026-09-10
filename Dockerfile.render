@@ -1,0 +1,25 @@
+FROM node:24-bookworm-slim AS frontend-build
+WORKDIR /app/frontend
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV STATIC_EXPORT=true
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend ./
+RUN npm run build
+
+FROM python:3.11-slim
+WORKDIR /app
+ENV PYTHONUNBUFFERED=1
+ENV AI_MODE=demo
+ENV DEMO_ENABLED=true
+COPY backend/requirements.txt backend/requirements.txt
+RUN pip install --no-cache-dir -r backend/requirements.txt
+COPY backend backend
+COPY ai ai
+COPY data data
+RUN python ai/train.py
+COPY --from=frontend-build /app/frontend/out frontend/out
+COPY render-start.sh /app/render-start.sh
+RUN chmod +x /app/render-start.sh
+EXPOSE 10000
+CMD ["/app/render-start.sh"]

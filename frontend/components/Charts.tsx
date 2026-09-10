@@ -1,0 +1,6 @@
+﻿'use client';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar, Cell } from 'recharts';
+export function Trend({data}:{data:any[]}) { return <div className="chart" role="img" aria-label="Historical distress trend"><ResponsiveContainer width="100%" height="100%"><LineChart data={data}><CartesianGrid strokeDasharray="4 4" vertical={false}/><XAxis dataKey="date" tick={{fontSize:11}} tickFormatter={v=>String(v).slice(5,10)}/><YAxis domain={[0,100]} tick={{fontSize:11}}/><Tooltip/><Line isAnimationActive={false} name="Distress indicators" type="monotone" dataKey="distress" stroke="#49796b" strokeWidth={3} dot={false}/></LineChart></ResponsiveContainer></div>; }
+const colors=['#668e7c','#b49655','#b97341','#ad5360','#617f9e'];
+export function Bars({data}:{data:any[]}) { return <div className="chart small" role="img" aria-label={data.map(d=>`${d.name}: ${d.value}`).join(', ')}><ResponsiveContainer width="100%" height="100%"><BarChart data={data}><XAxis dataKey="name" tick={{fontSize:10}}/><YAxis allowDecimals={false}/><Tooltip/><Bar isAnimationActive={false} dataKey="value" radius={[5,5,0,0]}>{data.map((_,i)=><Cell key={i} fill={colors[i%colors.length]}/>)}</Bar></BarChart></ResponsiveContainer></div>; }
+

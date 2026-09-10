@@ -1,0 +1,16 @@
+# AI pipeline
+
+All values are prototype indicators. Nothing here diagnoses illness or authorizes treatment, police, protection, or legal action.
+
+1. Validate structured answers, text length, consent and case scope.
+2. Normalize text; detect Devanagari or use the selected English/Hinglish language. Domain phrases use short negation windows. Signals include threat, fear, sleep, court stress, family safety, isolation, support and case delays. This is a contextual rule fallback, not a pretrained emotion model. Intensities are not calibrated confidence values.
+3. Optional PCM WAV extraction computes autocorrelation pitch, variability, RMS energy, pause ratio, spectral centroid, 13 mel-frequency cepstral coefficients and words per minute when a transcript exists. After three prior recordings, compare measurements with their mean. No acoustic emotion labels are invented.
+4. Weight questionnaire .25, safety .20, text .15, trend .15, sleep .10, engagement .05 and voice deviation .10. Missing inputs are excluded and the available weights are renormalized. Explanations store the actual additive distress contributions. Safety separately combines reported/case threats, unsafe responses and family safety context. Thresholds in `config.py`: Low 0–29, Mild 30–49, Moderate 50–69, High 70–84, Critical 85–100.
+5. Trend analysis compares timestamped observations, reports 7/14/30-day changes only when a sufficiently old observation exists, and calculates slope, recent volatility and directional flags. Same-day new check-ins affect the latest direction but do not falsely manufacture weekly history.
+6. `ai/train.py` builds 150 synthetic 16-week histories with nine trajectory patterns. A future-step target marks a ≥7-point rise or a crossing into ≥70. The training set contains 120 people; 30 other people form the test set. Logistic regression uses standardized current/history/case/structured features. JSON artifacts avoid loading executable pickle files.
+7. Missing/corrupt model JSON falls back to an explicit rule escalation index. Priority is the maximum category across distress, safety and escalation, with an urgent-language human-review override. Synthetic future-escalation probabilities are not calibrated real-world probabilities.
+8. Moderate/high/critical estimates create scoped alerts. Humans authorize interventions. Later assessments measure observed change after intervention without causal claims.
+
+Demo seed history explicitly uses synthetic trajectory values for visual storytelling. Fresh check-ins and scenario launcher actions calculate their own results. Scores will not necessarily equal illustrative numbers in the build prompt, and the engine does not infer sleep problems from a statement that contains no sleep evidence.
+
+`AI_MODE=local` and `production` use the available artifact and disclose NLP fallback. Production model providers, ASR, trained multilingual transformers and validated speech emotion classifiers are extension work, not simulated capabilities. External keys are not needed for this build. For a replacement, preserve the response fields `sentiment`, `emotions`, `signals`, `evidence`, `method`, `fallback`, `scores`, `priority`, `explanation`, `prediction`, and `limitations`; evaluate separately on representative held-out humans before any real-world use.

@@ -1,0 +1,68 @@
+{
+  "version": "synthetic-logistic-v1",
+  "dataset_version": "synthetic-26094-v1",
+  "training_date": "2026-09-10T16:20:51.870666+00:00",
+  "records": 2400,
+  "train_people": 120,
+  "test_people": 30,
+  "test_records": 480,
+  "split": "Held-out people, no patient overlap",
+  "accuracy": 0.7458333333333333,
+  "precision": 0.3161764705882353,
+  "recall": 0.5972222222222222,
+  "f1": 0.41346153846153844,
+  "roc_auc": 0.704248366013072,
+  "confusion_matrix": [
+    [
+      315,
+      93
+    ],
+    [
+      29,
+      43
+    ]
+  ],
+  "feature_importance": [
+    {
+      "name": "current_distress",
+      "value": 0.5430282223677448
+    },
+    {
+      "name": "previous_distress",
+      "value": 0.5625612684793034
+    },
+    {
+      "name": "distress_delta_7d",
+      "value": 0.019684870316463175
+    },
+    {
+      "name": "threat_level",
+      "value": 0.6528923098681646
+    },
+    {
+      "name": "court_event",
+      "value": 0.6162931992042938
+    },
+    {
+      "name": "investigation_delay",
+      "value": 0.0134080352923352
+    },
+    {
+      "name": "compensation_delay",
+      "value": 0.01831624366495149
+    },
+    {
+      "name": "sleep_score",
+      "value": 0.1721338646995428
+    },
+    {
+      "name": "fear_score",
+      "value": 0.6426071431864288
+    },
+    {
+      "name": "missed_checkins",
+      "value": 0.4701180421292907
+    }
+  ],
+  "limitations": "Synthetic outcomes and features are generator-dependent; not clinical or real-world validation."
+}

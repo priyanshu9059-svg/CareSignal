@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CareSignal - Mental Health Monitoring</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" class="brand-svg">
+            <path d="M12 3C7 3 3 7 3 12s4 9 9 9 9-4 9-9S17 3 12 3z" fill="none" stroke="currentColor" stroke-width="2" />
+            <path d="M8.5 12.5c1.2 2.2 3 3.3 5.5 3.3 2.8 0 4.7-1.6 5.1-4.8" fill="none" stroke="currentColor" stroke-width="2" />
+            <path d="M8 8h8" fill="none" stroke="currentColor" stroke-width="2" />
+          </svg>
+        </div>
+        <span class="brand-text">CareSignal</span>
+      </div>
+
+      <div class="profile-card">
+        <div class="profile-top">
+          <div class="avatar-wrap">
+            <div class="avatar-avatar">AM</div>
+          </div>
+          <div>
+            <span class="micro-label">Monitoring Unit</span>
+            <div class="profile-name">Ananya Mehta</div>
+          </div>
+        </div>
+        <div class="profile-meta">
+          <span class="meta-dot"></span>
+          <span class="meta-text">Coordinator Online</span>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <div class="nav-label">Overview</div>
+        <a class="nav-link active" href="#">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24"><path d="M4 13h7l3-7 3 14 2-7h4" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+          </span>
+          <span>Dashboard</span>
+          <span class="nav-pill">12</span>
+        </a>
+        <a class="nav-link" href="#">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24"><path d="M4 19h16M7 15l4-4 4 4 5-8" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+          </span>
+          <span>Risk Intelligence</span>
+        </a>
+        <a class="nav-link" href="#">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24"><path d="M4 7h16v10H4z" fill="none" stroke="currentColor" stroke-width="2" /><path d="M8 19h8" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+          </span>
+          <span>Case Registry</span>
+        </a>
+        <a class="nav-link" href="#">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24"><path d="M5 19V10l7-6 7 6v9" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+          </span>
+          <span>Interventions</span>
+        </a>
+        <a class="nav-link" href="#">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24"><path d="M5 18C7 14 8.5 13 11.5 13S16 12 18 8" fill="none" stroke="currentColor" stroke-width="2" /><path d="M6 6h12v12H6z" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+          </span>
+          <span>Assessment Flow</span>
+        </a>
+      </nav>
+
+      <section class="sidebar-section">
+        <div class="section-title">Action Queue</div>
+        <div class="queue-list">
+          <div class="queue-row priority-high">
+            <span class="queue-color"></span>
+            <span class="queue-text">Urgent review</span>
+            <span class="queue-count">04</span>
+          </div>
+          <div class="queue-row priority-medium">
+            <span class="queue-color"></span>
+            <span class="queue-text">Counselling follow-up</span>
+            <span class="queue-count">12</span>
+          </div>
+          <div class="queue-row priority-low">
+            <span class="queue-color"></span>
+            <span class="queue-text">Check-in pending</span>
+            <span class="queue-count">26</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="sidebar-section model-panel">
+        <div class="section-title">Model Status</div>
+        <div class="model-status">
+          <div class="status-line">
+            <span class="status-label">NLP Engine</span>
+            <span class="status-badge online">online</span>
+          </div>
+          <div class="status-line">
+            <span class="status-label">Risk Engine</span>
+            <span class="status-badge online">online</span>
+          </div>
+          <div class="status-line">
+            <span class="status-label">Voice Baseline</span>
+            <span class="status-badge warning">syncing</span>
+          </div>
+        </div>
+      </section>
+
+      <div class="sidebar-footer">
+        <button class="primary-button small-button">
+          <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9" fill="none" stroke="currentColor" stroke-width="2" /><path d="M12 8h.01M12 12l4-4" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+          Request review
+        </button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <section class="topbar">
+        <div class="crumbs">
+          <span class="crumb-text">Operations</span>
+          <span class="crumb-divider">/</span>
+          <span class="crumb-current">Mental Health Monitoring</span>
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-button">
+            <svg viewBox="0 0 24 24"><path d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16z" fill="none" stroke="currentColor" stroke-width="2" /><path d="m16 16 4 4" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+          </button>
+          <button class="icon-button">
+            <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7.2 0 10h12c3-2.8 0-3 0-10z" fill="none" stroke="currentColor" stroke-width="2" /><path d="M9.8 20h4.4" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+          </button>
+          <button class="primary-button">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+            New case
+          </button>
+        </div>
+      </section>
+
+      <section class="page-header">
+        <div>
+          <span class="overline">Care Intelligence Dashboard</span>
+          <h1>Psychosocial Risk Monitoring</h1>
+        </div>
+        <div class="date-controls">
+          <button class="date-button active">Today</button>
+          <button class="date-button">7 days</button>
+          <button class="date-button">30 days</button>
+          <span class="cal-date">Sep 10, 2026</span>
+        </div>
+      </section>
+
+      <section class="kpi-grid">
+        <article class="kpi-card">
+          <div class="kpi-card-head">
+            <span class="kpi-label">Active Cases</span>
+            <span class="kpi-icon blue">
+              <svg viewBox="0 0 24 24"><path d="M4 19c1-4 3-6 7-6s6 2 8 6" fill="none" stroke="currentColor" stroke-width="2" /><circle cx="12" cy="6" r="3" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+            </span>
+          </div>
+          <div class="kpi-value">128</div>
+          <div class="kpi-meta">
+            <span class="trend up">+14.2%</span>
+            <span class="meta-label">vs last week</span>
+          </div>
+        </article>
+
+        <article class="kpi-card">
+          <div class="kpi-card-head">
+            <span class="kpi-label">High Risk</span>
+            <span class="kpi-icon red">
+              <svg viewBox="0 0 24 24"><path d="M12 3 3 19h18z" fill="none" stroke="currentColor" stroke-width="2" /><path d="M12 9h.01M12 13h.01M12 17h.01" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+            </span>
+          </div>
+          <div class="kpi-value">08</div>
+          <div class="kpi-meta">
+            <span class="trend up">+2</span>
+            <span class="meta-label">requires review</span>
+          </div>
+        </article>
+
+        <article class="kpi-card">
+          <div class="kpi-card-head">
+            <span class="kpi-label">Avg. Distress Score</span>
+            <span class="kpi-icon amber">
+              <svg viewBox="0 0 24 24"><path d="M5 18l7-14 7 14H5z" fill="none" stroke="currentColor" stroke-width="2" /><path d="M12 6v8" fill="none" stroke="currentColor" stroke-width="2" /><path d="M12 15h.01" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+            </span>
+          </div>
+          <div class="kpi-value">63.4</div>
+          <div class="kpi-meta">
+            <span class="trend down">-7.1%</span>
+            <span class="meta-label">improving trend</span>
+          </div>
+        </article>
+
+        <article class="kpi-card">
+          <div class="kpi-card-head">
+            <span class="kpi-label">Response Coverage</span>
+            <span class="kpi-icon green">
+              <svg viewBox="0 0 24 24"><path d="M5 12l4 4L19 0" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+            </span>
+          </div>
+          <div class="kpi-value">91%</div>
+          <div class="kpi-meta">
+            <span class="trend up">+3.8%</span>
+            <span class="meta-label">check-in rate</span>
+          </div>
+        </article>
+      </section>
+
+      <section class="content-grid">
+        <section class="panel span-2">
+          <div class="panel-header">
+            <div>
+              <span class="panel-kicker">Risk Trajectory</span>
+              <h2>Case Escalation Timeline</h2>
+            </div>
+            <div class="panel-actions">
+              <button class="icon-button small-icon">
+                <svg viewBox="0 0 24 24"><path d="M4 14a8 8 0 0 1 8-8 8 8 0 0 1 8 8" fill="none" stroke="currentColor" stroke-width="2" /><path d="M4 18h16" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+              </button>
+              <button class="icon-button small-icon">
+                <svg viewBox="0 0 24 24"><path d="M5 19L19 5" fill="none" stroke="currentColor" stroke-width="2" /><path d="M5 5h14v14H5z" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+              </button>
+            </div>
+          </div>
+          <div class="risk-chart">
+            <div class="chart-legend">
+              <span><span class="legend-dot distress"></span>Distress</span>
+              <span><span class="legend-dot risk"></span>Risk</span>
+              <span><span class="legend-dot engagement"></span>Engagement</span>
+            </div>
+            <div class="line-chart">
+              <svg viewBox="0 0 800 260" class="svg-chart" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="riskArea" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0" stop-color="#7c86ff" stop-opacity="0.26" />
+                    <stop offset="1" stop-color="#7c86ff" stop-opacity="0.02" />
+                  </linearGradient>
+                </defs>
+                <g class="grid-lines">
+                  <path d="M0 30H800" />
+                  <path d="M0 80H800" />
+                  <path d="M0 130H800" />
+                  <path d="M0 180H800" />
+                  <path d="M0 230H800" />
+                </g>
+                <path class="chart-area" d="M0 190 C70 160, 80 150, 110 150 C130 150, 130 155, 150 148 C170 138, 180 120, 205 135 C235 120, 240 101, 265 98 C300 90, 305 104, 330 90 C360 78, 355 96, 380 105 C410 112, 420 120, 450 118 C480 105, 490 95, 513 112 C540 120, 555 116, 570 120 C590 142, 620 150, 660 112 C690 100, 700 90, 720 100 C750 118, 760 115, 800 111 L800 260 L0 260 Z" />
+                <path class="chart-line distress-line" d="M0 190 C70 160, 80 150, 110 150 C130 150, 130 155, 150 148 C170 138, 180 120, 205 135 C235 120, 240 101, 265 98 C300 90, 305 104, 330 90 C360 78, 355 96, 380 105 C410 112, 420 120, 450 118 C480 105, 490 95, 513 112 C540 120, 555 116, 570 120 C590 142, 620 150, 660 112 C690 100, 700 90, 720 100 C750 118, 760 115, 800 111" />
+                <path class="chart-line risk-line" d="M0 200 C70 190, 80 180, 110 178 C130 175, 130 165, 150 160 C170 168, 180 160, 205 170 C235 180, 240 165, 265 175 C300 160, 305 150, 330 160 C360 150, 355 148, 380 140 C410 140, 420 156, 450 150 C480 160, 490 140, 513 150 C540 150, 555 135, 570 142 C590 146, 620 150, 660 132 C690 130, 700 110, 720 120 C750 125, 760 130, 800 120" />
+                <path class="chart-line engagement-line" d="M0 174 C70 165, 80 162, 110 160 C130 158, 130 150, 150 142 C170 144, 180 146, 205 155 C235 160, 240 165, 265 165 C300 155, 305 160, 330 158 C360 150, 355 150, 380 150 C410 148, 420 150, 450 151 C480 160, 490 150, 513 151 C540 160, 555 155, 570 160 C590 150, 620 152, 660 142 C690 140, 700 130, 720 140 C750 132, 760 127, 800 130" />
+                <circle class="point" cx="540" cy="120" r="4" />
+                <circle class="point" cx="640" cy="150" r="4" />
+              </svg>
+            </div>
+          </div>
+          <div class="chart-axis">
+            <span>Week 1</span>
+            <span>Week 2</span>
+            <span>Week 3</span>
+            <span>Week 4</span>
+            <span>Week 5</span>
+            <span>Week 6</span>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <span class="panel-kicker">Signal Quality</span>
+              <h2>Assessment Inputs</h2>
+            </div>
+            <span class="panel-tag success">Synced</span>
+          </div>
+          <div class="signal-list">
+            <div class="signal-row">
+              <div class="signal-label">
+                <span class="signal-dot text"></span>
+                Text / NLP
+              </div>
+              <div class="signal-bar">
+                <span class="bar track"><span class="bar-fill fill-text" style="width: 88%;"></span></span>
+              </div>
+              <div class="signal-score">88%</div>
+            </div>
+            <div class="signal-row">
+              <div class="signal-label">
+                <span class="signal-dot audio"></span>
+                Voice Features
+              </div>
+              <div class="signal-bar">
+                <span class="bar track"><span class="bar-fill fill-audio" style="width: 76%;"></span></span>
+              </div>
+              <div class="signal-score">76%</div>
+            </div>
+            <div class="signal-row">
+              <div class="signal-label">
+                <span class="signal-dot emotion"></span>
+                Emotion Engine
+              </div>
+              <div class="signal-bar">
+                <span class="bar track"><span class="bar-fill fill-emotion" style="width: 83%;"></span></span>
+              </div>
+              <div class="signal-score">83%</div>
+            </div>
+            <div class="signal-row">
+              <div class="signal-label">
+                <span class="signal-dot distress"></span>
+                Distress Model
+              </div>
+              <div class="signal-bar">
+                <span class="bar track"><span class="bar-fill fill-distress" style="width: 72%;"></span></span>
+              </div>
+              <div class="signal-score">72%</div>
+            </div>
+          </div>
+
+          <div class="insights-card">
+            <span class="insights-label">Explainability Summary</span>
+            <div class="insights-text">
+              Risk increased due to sleep deterioration, threat context keywords, and reduced engagement signals.
+            </div>
+            <div class="explainability-tags">
+              <span class="tag">fear language</span>
+              <span class="tag">sleep decline</span>
+              <span class="tag">threat context</span>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section class="content-grid lower-grid">
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <span class="panel-kicker">Case Dispatch</span>
+              <h2>Priority Cases</h2>
+            </div>
+            <button class="ghost-button">Export</button>
+          </div>
+          <div class="case-list">
+            <article class="case-row high">
+              <div class="case-head">
+                <span class="case-id">CS-26094</span>
+                <span class="case-risk high-risk">High Risk</span>
+              </div>
+              <div class="case-name">Threat perception + sleep decline</div>
+              <div class="case-meta">
+                <span>Distress 76</span>
+                <span>Last check-in 18m ago</span>
+              </div>
+              <div class="case-progress">
+                <span class="bar track"><span class="bar-fill fill-high" style="width: 76%;"></span></span>
+              </div>
+            </article>
+
+            <article class="case-row medium">
+              <div class="case-head">
+                <span class="case-id">CS-26108</span>
+                <span class="case-risk medium-risk">Medium Risk</span>
+              </div>
+              <div class="case-name">Court date stress + family support</div>
+              <div class="case-meta">
+                <span>Distress 61</span>
+                <span>Follow-up scheduled</span>
+              </div>
+              <div class="case-progress">
+                <span class="bar track"><span class="bar-fill fill-medium" style="width: 61%;"></span></span>
+              </div>
+            </article>
+
+            <article class="case-row">
+              <div class="case-head">
+                <span class="case-id">CS-26130</span>
+                <span class="case-risk low-risk">Low Risk</span>
+              </div>
+              <div class="case-name">Recovery engagement trending upward</div>
+              <div class="case-meta">
+                <span>Distress 42</span>
+                <span>Intervention active</span>
+              </div>
+              <div class="case-progress">
+                <span class="bar track"><span class="bar-fill fill-low" style="width: 42%;"></span></span>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <span class="panel-kicker">Intervention Routing</span>
+              <h2>Care Coordination</h2>
+            </div>
+            <span class="panel-tag warning">3 pending</span>
+          </div>
+          <div class="intervention-grid">
+            <div class="intervention-card">
+              <span class="intervention-icon">
+                <svg viewBox="0 0 24 24"><path d="M5 11a7 7 0 0 1 14 0v3l2 3H3l2-3z" fill="none" stroke="currentColor" stroke-width="2" /><path d="M9 21h6" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+              </span>
+              <div>
+                <span class="intervention-label">Counselling Assignment</span>
+                <span class="intervention-value">02</span>
+              </div>
+            </div>
+            <div class="intervention-card">
+              <span class="intervention-icon">
+                <svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z" fill="none" stroke="currentColor" stroke-width="2" /><path d="M8 12h8M12 8v8" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+              </span>
+              <div>
+                <span class="intervention-label">Safety Review</span>
+                <span class="intervention-value">04</span>
+              </div>
+            </div>
+            <div class="intervention-card">
+              <span class="intervention-icon">
+                <svg viewBox="0 0 24 24"><path d="M4 8h16v8H4z" fill="none" stroke="currentColor" stroke-width="2" /><path d="M8 18h8" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+              </span>
+              <div>
+                <span class="intervention-label">Legal / Finance</span>
+                <span class="intervention-value">07</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="timeline">
+            <div class="timeline-head">
+              <span>Today’s Workflow</span>
+              <span class="timeline-date">09:00 - 18:30</span>
+            </div>
+            <div class="timeline-list">
+              <div class="timeline-row">
+                <span class="timeline-icon success-icon"></span>
+                <span class="timeline-text">Risk flagged and triaged</span>
+                <span class="timeline-time">09:10</span>
+              </div>
+              <div class="timeline-row">
+                <span class="timeline-icon warn-icon"></span>
+                <span class="timeline-text">Safety interview requested</span>
+                <span class="timeline-time">10:45</span>
+              </div>
+              <div class="timeline-row">
+                <span class="timeline-icon idle-icon"></span>
+                <span class="timeline-text">Case note update pending</span>
+                <span class="timeline-time">12:20</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section class="content-grid bottom-grid">
+        <section class="panel span-2">
+          <div class="panel-header">
+            <div>
+              <span class="panel-kicker">Sentiment & Emotion Flow</span>
+              <h2>Language Intelligence</h2>
+            </div>
+            <span class="panel-tag neutral">multilingual</span>
+          </div>
+          <div class="language-grid">
+            <div class="language-card">
+              <span class="language-label">Fear / Threat</span>
+              <span class="language-value high-value">High</span>
+              <span class="language-detail">02 alerts</span>
+            </div>
+            <div class="language-card">
+              <span class="language-label">Sadness</span>
+              <span class="language-value med-value">Medium</span>
+              <span class="language-detail">06 signals</span>
+            </div>
+            <div class="language-card">
+              <span class="language-label">Hinglish Signal</span>
+              <span class="language-value low-value">Detected</span>
+              <span class="language-detail">Hindi + English</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <span class="panel-kicker">Auto-generated Risk</span>
+              <h2>Decision Summary</h2>
+            </div>
+            <span class="panel-tag danger">High</span>
+          </div>
+          <div class="decision-summary">
+            <div class="decision-score">76</div>
+            <div class="decision-text">
+              <span>Escalation Risk</span>
+              <div class="summary-bar">
+                <span class="bar track"><span class="bar-fill fill-high" style="width: 76%;"></span></span>
+              </div>
+              <small>Threat context, distress trend, sleep deterioration</small>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
+</body>
+</html>

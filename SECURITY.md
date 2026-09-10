@@ -1,0 +1,13 @@
+# Security and privacy
+
+Implemented: scrypt with random per-password salt; eight-hour signed JWTs; HttpOnly/SameSite=Strict cookies; optional Secure flag for HTTPS; origin validation on mutations; strict input schemas; SQLAlchemy bound queries; case ownership, assignment and district authorization; aggregate-only state/national roles; consent gates; in-memory request limits; response security headers; audit records for key reads and writes; file-size, duration, encoding and sample-rate checks. React escapes rendered text. The frontend never receives password hashes or a secret signing key.
+
+Demo accounts are public by design and must not be used with real information. `AI_MODE=production` requires JWT_SECRET and disables automatic demo seeding/scenarios. Use a fresh database when moving out of demo; changing the mode does not remove existing demo users. System account provisioning and real identity verification are deployment responsibilities.
+
+Role matrix: participants own-case only; counsellors assigned-case only; officers own-district only; state administrators state aggregates; national administrators national aggregates; system administrators manage users and operational records. Participant case and follow-up responses explicitly omit internal notes, detailed risk analytics and other participants' identities. Notifications are owner-scoped.
+
+Consent records are append-only. Withdrawal stops new optional wellbeing and voice collection. Historical assessments/features remain for audit and follow-up; a production retention/deletion process is not implemented. Safety support requests can still be sent without optional analysis consent. Raw WAV recordings are not retained. Browser transcription may depend on an external browser service; the consent text discloses this. No transcript is written to application logs.
+
+Local secrets: `.env` and databases are ignored. With no configured JWT_SECRET, the demo process uses an ephemeral random key. Configure a persistent key for stable sessions and Secure cookies behind HTTPS. Logout clears the cookie; individual token revocation is not implemented. Rate limiting is process-local and resets on restart; deploy one backend worker for the prototype. Redis is included for future distributed coordination, not falsely claimed as active infrastructure.
+
+Before real deployment: representative model review, data protection assessment, key rotation/revocation, least-privilege database roles, TLS, backups, documented retention and deletion, distributed rate limits, ingress size limits, alert SLAs and human staffing, legal consent review, and external-provider contracts. This repository has not received a penetration test or clinical validation.
