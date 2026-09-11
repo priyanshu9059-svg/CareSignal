@@ -4,7 +4,7 @@ Interactive, generated contracts: `http://127.0.0.1:8000/docs`; machine-readable
 
 Authentication: `POST /auth/login` with `{email,password}` sets an HttpOnly, SameSite=Strict JWT cookie for eight hours. `POST /auth/logout` clears the browser cookie and revokes the JWT `jti` until expiry. `GET /me` returns the user's role and latest consent. Bearer tokens are accepted for programmatic clients, but login does not expose the token to frontend JavaScript. `POST /auth/register` is system-admin-only and creates the linked victim identity when appropriate.
 
-Consent: `POST /consents` accepts `{wellbeing, voice, language, erase_voice?, erase_checkins?}`. Optional erase flags remove stored WAVs and/or redact free-text when withdrawing. `POST /privacy/erase` performs erasure without changing consent. `GET /health` reports database and storage checks.
+Consent: `POST /consents` accepts `{wellbeing, voice, language, erase_voice?, erase_checkins?}`. Optional erase flags remove stored WAVs and/or redact free-text when withdrawing. `POST /privacy/erase` performs erasure without changing consent. `GET /health` reports database and storage checks. Participant case detail includes a safe `support_timeline`. `PATCH /cases/{id}/assign` hands over a case within district. Critical alert close requires acknowledgement, an intervention, and a close note. `POST /chat` returns guided intents/actions/resources. `POST /ai/transcribe` accepts optional audio for server ASR when configured.
 
 | Routes | Authorization / behavior |
 |---|---|

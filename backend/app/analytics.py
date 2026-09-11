@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from .database import Alert, Assessment, AuditLog, Case, District, FollowUp, Intervention, State, User, get_db, now
 from .auth import current_user, roles
-from .services import audit, case_summary, serialize, scope, submit_assessment
+from .services import audit, alert_response_minutes, case_summary, serialize, scope, submit_assessment
 from .config import MODEL_PATH, AI_MODE, DEMO_ENABLED
 from .schemas import AssessmentInput, Responses
 
@@ -41,6 +41,7 @@ def dashboard(level: str, user: User = Depends(current_user), db: Session = Depe
     days = defaultdict(list)
     for a in db.scalars(select(Assessment).where(Assessment.case_id.in_(ids))):
         days[a.created_at.date().isoformat()].append(a.data['scores']['distress'])
+    timing = alert_response_minutes(alerts)
     audit(db, user, 'view aggregate dashboard', level)
     db.commit()
     return {'level': level, 'synthetic': True, 'kpis': {'Active cases': len(cases), 'High risk': distribution['High'], 'Critical': distribution['Critical'],
@@ -51,7 +52,7 @@ def dashboard(level: str, user: User = Depends(current_user), db: Session = Depe
         'intervention_status': [{'name': k, 'value': v} for k, v in Counter(i.status for i in interventions).items()],
         'trajectories': [{'name': k, 'value': v} for k, v in Counter(c['trend'].get('direction', 'Unknown') for c in summaries).items()],
         'case_stages': [{'name': k, 'value': v} for k, v in Counter(c['stage'] for c in summaries).items()],
-        'response_time': None, 'response_time_note': 'Not enough audited acknowledgement timing data'}
+        'response_time': timing['avg_minutes'], 'response_time_note': timing['note']}
 
 @router.get('/research')
 def research(user: User = Depends(roles('admin')), db: Session = Depends(get_db)):

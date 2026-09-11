@@ -18,16 +18,18 @@ from .database import (
 )
 from .auth import current_user, roles, token, hash_password, verify_password, revoke_token
 from .schemas import (
-    AlertUpdate, AssessmentInput, CaseInput, ChatInput, ConsentInput, EraseInput,
+    AlertUpdate, AssessmentInput, CaseAssign, CaseInput, ChatInput, ConsentInput, EraseInput,
     EventInput, FollowUpInput, FollowUpUpdate, InterventionInput, InterventionUpdate,
     Login, Register, SupportInput, TextInput,
 )
 from .services import (
-    access_case, audit, case_detail, case_summary, consent_for, erase_optional_data,
-    history_for, notify, public_user, require_consent, rows, scope, serialize,
-    staff_assignment, submit_assessment, uid,
+    access_case, alert_response_minutes, audit, case_detail, case_summary, consent_for,
+    erase_optional_data, history_for, notify, public_user, require_consent, rows, scope,
+    serialize, staff_assignment, submit_assessment, uid,
 )
 from .ai import analyze_text, audio_features
+from .asr import asr_status, transcribe_audio
+from .support_guide import guided_support
 from .config import COOKIE_SECURE, DEMO_ENABLED, MODEL_PATH, AI_MODE, STORAGE_PATH
 
 logger = logging.getLogger('caresignal')
@@ -198,8 +200,10 @@ def privacy_erase(body: EraseInput, user: User = Depends(roles('victim')), db: S
     return {'ok': True, 'erasure': erasure}
 
 @app.get('/cases')
-def cases(user: User = Depends(current_user), db: Session = Depends(get_db)):
+def cases(mine: bool = False, user: User = Depends(current_user), db: Session = Depends(get_db)):
     values = scope(db, user)
+    if mine and user.role in {'counsellor', 'officer'}:
+        values = [c for c in values if c.assigned_to == user.id]
     audit(db, user, 'view', 'case list')
     db.commit()
     if user.role == 'victim':
@@ -227,6 +231,22 @@ def detail(case_id: str, user: User = Depends(current_user), db: Session = Depen
     audit(db, user, 'view case', case_id)
     db.commit()
     return case_detail(db, user, case)
+
+@app.patch('/cases/{case_id}/assign')
+def assign_case(case_id: str, body: CaseAssign, user: User = Depends(roles('officer', 'counsellor', 'admin')), db: Session = Depends(get_db)):
+    case = access_case(db, user, case_id)
+    assigned = db.get(User, body.assigned_to)
+    if not assigned or assigned.role not in ['counsellor', 'officer'] or assigned.district_id != case.district_id:
+        raise HTTPException(422, 'Select a counsellor or officer from the case district')
+    if user.role == 'counsellor' and user.district_id != case.district_id:
+        raise HTTPException(403, 'Counsellors may only hand over cases in their district')
+    case.assigned_to = assigned.id
+    notify(db, assigned.id, f'{case.id}: case handed over to you', case.id, priority='High', body=f'Case {case.id} was assigned to you for follow-up.')
+    victim = db.get(Victim, case.victim_id)
+    notify(db, victim.user_id, 'Your support contact was updated', case.id, body='A support team member is now assigned to your case.')
+    audit(db, user, 'handover case', case.id)
+    db.commit()
+    return case_summary(db, case)
 
 @app.get('/staff')
 def staff(user: User = Depends(roles('officer', 'counsellor', 'admin')), db: Session = Depends(get_db)):
@@ -352,14 +372,30 @@ def voice_audio(voice_id: str, user: User = Depends(roles('officer', 'counsellor
     return FileResponse(path, media_type='audio/wav', filename=f'{item.id}.wav')
 
 @app.post('/ai/transcribe')
-def transcribe(user: User = Depends(roles('victim')), db: Session = Depends(get_db)):
+async def transcribe(
+    language: str = Form('en'),
+    file: UploadFile | None = File(None),
+    user: User = Depends(roles('victim')),
+    db: Session = Depends(get_db),
+):
     require_consent(db, user, True)
-    return {'available': False, 'message': 'Server ASR is not installed. Use browser speech recognition if available, or type and review your transcript.'}
+    if file is None:
+        return asr_status()
+    raw = await file.read(10 * 1024 * 1024 + 1)
+    if len(raw) > 10 * 1024 * 1024:
+        raise HTTPException(413, 'Maximum recording size is 10 MB')
+    if language not in {'en', 'hi', 'hinglish'}:
+        language = 'en'
+    return transcribe_audio(raw, language)
 
 @app.get('/alerts')
-def alerts(user: User = Depends(roles('officer', 'counsellor', 'admin')), db: Session = Depends(get_db)):
+def alerts(mine: bool = False, user: User = Depends(roles('officer', 'counsellor', 'admin')), db: Session = Depends(get_db)):
     ids = [c.id for c in scope(db, user)]
-    return [serialize(a) for a in db.scalars(select(Alert).where(Alert.case_id.in_(ids)).order_by(Alert.created_at.desc()))]
+    query = select(Alert).where(Alert.case_id.in_(ids)).order_by(Alert.created_at.desc())
+    items = list(db.scalars(query))
+    if mine:
+        items = [a for a in items if a.assigned_to == user.id or a.assigned_to is None]
+    return [serialize(a) for a in items]
 
 @app.get('/alerts/{alert_id}')
 def get_alert(alert_id: str, user: User = Depends(roles('officer', 'counsellor', 'admin')), db: Session = Depends(get_db)):
@@ -379,9 +415,27 @@ def update_alert(alert_id: str, body: AlertUpdate, user: User = Depends(roles('o
     if not item:
         raise HTTPException(404, 'Alert not found')
     case = access_case(db, user, item.case_id)
+    data = dict(item.data or {})
+    priority = data.get('priority') or 'Moderate'
+    if body.status in {'Resolved', 'Closed'} and priority == 'Critical':
+        if not data.get('acknowledged_at'):
+            raise HTTPException(422, 'Acknowledge this Critical alert before closing it')
+        if not (body.close_note or '').strip():
+            raise HTTPException(422, 'Add a close note before closing a Critical alert')
+        alert_time = item.created_at.replace(tzinfo=None)
+        recent = [i for i in rows(db, Intervention, case.id) if i.created_at.replace(tzinfo=None) >= alert_time]
+        if not recent:
+            raise HTTPException(422, 'Confirm at least one intervention after this alert before closing a Critical alert')
+        data['close_note'] = body.close_note
+        data['closed_at'] = now().isoformat()
+    if body.status == 'Acknowledged' and not data.get('acknowledged_at'):
+        data['acknowledged_at'] = now().isoformat()
+        data['acknowledged_by'] = user.id
     if body.assigned_to:
         staff_assignment(db, user, case, body.assigned_to)
         item.assigned_to = body.assigned_to
+        data['assigned_at'] = now().isoformat()
+    item.data = data
     item.status = body.status
     audit(db, user, 'alert ' + body.status, item.id)
     db.commit()
@@ -396,7 +450,7 @@ def intervention(body: InterventionInput, user: User = Depends(roles('officer', 
     item = Intervention(id=uid('INT'), case_id=case.id, author_id=user.id, assigned_to=assigned.id, data={'kind': body.kind, 'notes': body.notes, 'outcome': ''})
     db.add(item)
     victim = db.get(Victim, case.victim_id)
-    notify(db, victim.user_id, body.kind + ' assigned', case.id)
+    notify(db, victim.user_id, body.kind + ' assigned', case.id, body=f'{body.kind} was assigned for your case.')
     audit(db, user, 'human authorized intervention', item.id)
     db.commit()
     return serialize(item)
@@ -502,19 +556,7 @@ def chat(body: ChatInput, user: User = Depends(roles('victim')), db: Session = D
     access_case(db, user, body.case_id)
     require_consent(db, user)
     signals = analyze_text(body.text, body.language)['signals']
-    safety = signals['threat'] or signals['urgent_safety']
-    messages = {
-        'en': ('Thank you for telling us. Would you like to send a safety concern to your support team?' if safety else 'What has changed since your last check-in? You can start a check-in or request support below.'),
-        'hi': ('बताने के लिए धन्यवाद। क्या आप अपनी सहायता टीम को सुरक्षा की चिंता भेजना चाहेंगे?' if safety else 'पिछली बातचीत के बाद क्या बदला है? आप चेक-इन शुरू कर सकते हैं या सहायता मांग सकते हैं।'),
-        'hinglish': ('Batane ke liye dhanyavaad. Kya aap support team ko safety concern bhejna chahenge?' if safety else 'Pichhle check-in ke baad kya badla? Aap check-in shuru kar sakte hain ya madad maang sakte hain.'),
-    }
-    return {
-        'message': messages[body.language],
-        'suggest_safety_report': safety,
-        'method': 'guided multilingual support baseline',
-        'sent': False,
-        'disclaimer': 'Guided prompts only — not a live counsellor or chatbot conversation.',
-    }
+    return guided_support(body.text, body.language, signals)
 
 from .analytics import router as analytics_router
 app.include_router(analytics_router)

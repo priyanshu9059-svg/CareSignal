@@ -87,5 +87,10 @@ class SupportInput(Strict):
 class AlertUpdate(Strict):
     status: Literal['New','Acknowledged','Assigned','In Progress','Resolved','Closed']
     assigned_to: str | None = None
+    close_note: str = Field(default='', max_length=1000)
+
+class CaseAssign(Strict):
+    assigned_to: str
+
 class ChatInput(TextInput):
     case_id: str

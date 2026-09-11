@@ -40,10 +40,20 @@ export type CaseSummary = {
 
 export type ChatReply = {
   message: string;
+  intent?: string;
   suggest_safety_report?: boolean;
   method?: string;
   sent?: boolean;
   disclaimer?: string;
+  actions?: { type: string; label: string; kind?: string }[];
+  resources?: { title: string; body: string }[];
+};
+
+export type SupportTimelineItem = {
+  at: string;
+  kind: string;
+  title: string;
+  detail?: string;
 };
 
 export type ResearchPayload = {
