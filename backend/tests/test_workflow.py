@@ -46,6 +46,32 @@ def test_api_prefix_parity(client):
     assert missing.status_code==404
     assert missing.headers.get('content-type','').startswith('application/json')
 
+def test_logout_revokes_token(client):
+    login(client,'victim')
+    assert client.get('/me').status_code==200
+    assert client.post('/auth/logout').status_code==200
+    assert client.get('/me').status_code==401
+
+def test_privacy_erase_voice(client):
+    login(client,'victim')
+    assert client.post('/consents',json={'wellbeing':True,'voice':True}).status_code==200
+    voice=client.post('/ai/analyze-voice',data={'case_id':'AT-20481','transcript':'I feel safe today'},files={'file':('voice.wav',make_audio(),'audio/wav')})
+    assert voice.status_code==200,voice.text
+    voice_id=voice.json()['voice_session_id']
+    erased=client.post('/privacy/erase',json={'erase_voice':True})
+    assert erased.status_code==200,erased.text
+    assert erased.json()['erasure']['voice_sessions_redacted']>=1
+    login(client,'counsellor')
+    assert client.get('/ai/voice/'+voice_id+'/audio').status_code==404
+
+def test_health_checks(client):
+    health=client.get('/health')
+    assert health.status_code==200
+    body=health.json()
+    assert body['status']=='ok'
+    assert body['checks']['database'] is True
+    assert body['checks']['storage'] is True
+
 def test_aggregate_roles_cannot_open_cases(client):
     for role in ['state','national']:
         login(client,role)
@@ -56,6 +82,7 @@ def test_aggregate_roles_cannot_open_cases(client):
 
 def test_end_to_end(client):
     login(client,'victim')
+    client.post('/consents',json={'wellbeing':False,'voice':False,'language':'en'})
     payload={'case_id':'AT-20481','language':'hinglish','text':'Mujhe bahut darr lag raha hai. Mere bhai ko dhamki di. Court jaane se dar lag raha hai. Neend nahi aati.',
              'responses':{'feeling':4,'fear':4,'sleep':4,'daily':4,'avoidance':4,'legal':4,'threat':True,'safe':False}}
     assert client.post('/assessments',json=payload).status_code==403

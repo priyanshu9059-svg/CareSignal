@@ -134,6 +134,13 @@ class ModelVersion(Record, Base):
     __tablename__ = 'model_versions'
     data: Mapped[dict] = mapped_column(JSON)
 
+class RevokedToken(Base):
+    __tablename__ = 'revoked_tokens'
+    id: Mapped[str] = mapped_column(String(80), primary_key=True)  # JWT jti
+    user_id: Mapped[str | None] = mapped_column(ForeignKey('users.id'), nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
 def get_db():
     with SessionLocal() as session:
         yield session

@@ -18,6 +18,17 @@ class ConsentInput(Strict):
     wellbeing: bool
     voice: bool = False
     language: Literal['en','hi','hinglish'] = 'en'
+    erase_voice: bool = False
+    erase_checkins: bool = False
+
+class EraseInput(Strict):
+    erase_voice: bool = False
+    erase_checkins: bool = False
+    @model_validator(mode='after')
+    def nonempty(self):
+        if not self.erase_voice and not self.erase_checkins:
+            raise ValueError('Select at least one optional data category to erase')
+        return self
 class TextInput(Strict):
     text: str = Field(max_length=10000)
     language: Literal['en','hi','hinglish'] = 'en'

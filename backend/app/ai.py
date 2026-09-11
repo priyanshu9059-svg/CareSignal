@@ -5,6 +5,7 @@ Train optional JSON artifacts with ai/train_text.py after local preprocessing.
 """
 import io
 import json
+import logging
 import math
 import re
 import wave
@@ -224,8 +225,8 @@ def voice_emotion_proxy(features: dict) -> dict:
             stress = round(min(1., probs.get('fear', 0) + probs.get('anger', 0) + .5 * probs.get('sadness', 0)), 3)
             return {'emotion': label, 'probs': probs, 'stress_score': stress,
                     'method': _VOICE_MODEL.get('version', 'voice-linear'), 'note': 'Trained acoustic proxy; acted-speech domain shift possible'}
-        except (KeyError, TypeError, ValueError, OverflowError):
-            pass
+        except (KeyError, TypeError, ValueError, OverflowError) as exc:
+            logging.getLogger('caresignal.ai').warning('Voice emotion model failed; using heuristic proxy: %s', type(exc).__name__)
 
     # Rule proxy grounded in common SER acoustic tendencies (high arousal → fear/anger; low energy+pause → sadness)
     if pitch is None:
@@ -387,7 +388,7 @@ def predict(features):
             z = (np.array(features) - np.array(model['mean'])) / np.array(model['scale'])
             score = round(float(100 / (1 + np.exp(-np.clip(np.dot(z, model['coef']) + model['intercept'], -30, 30)))))
             return {'score': score, 'method': 'logistic-regression-synthetic', 'version': model['version'], 'fallback': False}
-        except (OSError, ValueError, KeyError, TypeError, OverflowError):
-            pass
+        except (OSError, ValueError, KeyError, TypeError, OverflowError) as exc:
+            logging.getLogger('caresignal.ai').warning('Escalation model failed; using rule fallback: %s', type(exc).__name__)
     score = round(min(100, max(0, .65 * features[0] + max(0, features[2]) * .8 + features[3] * 20 + features[4] * 8 + features[9] * 4)))
     return {'score': score, 'method': 'rule-based escalation index (not probability)', 'fallback': True}

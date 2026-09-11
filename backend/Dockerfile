@@ -6,6 +6,8 @@ COPY backend backend
 COPY ai ai
 COPY data data
 RUN python ai/train.py
+ENV STORAGE_PATH=/app/storage
+RUN mkdir -p /app/storage
 WORKDIR /app/backend
 EXPOSE 8000
 CMD ["sh", "-c", "python migrate.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"]

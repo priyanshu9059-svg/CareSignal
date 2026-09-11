@@ -1,7 +1,13 @@
 import uuid
+from datetime import datetime
+from pathlib import Path
 from fastapi import HTTPException
 from sqlalchemy import select
-from .database import *
+from .database import (
+    Alert, Assessment, AssessmentResponse, AuditLog, BehaviourFeature, Case, CaseEvent,
+    Consent, District, FollowUp, Intervention, NLPResult, Notification, RiskExplanation,
+    RiskScore, SupportRequest, User, Victim, VoiceFeature, VoiceSession, now,
+)
 from .ai import calculate
 from .config import STORAGE_PATH
 
@@ -74,7 +80,7 @@ def checkin_rows(db, case_id):
             'has_voice':bool(voice),
             'voice_session_id':data.get('voice_session_id'),
             'voice_playable':bool(data.get('voice_playable') or (isinstance(voice,dict) and (voice.get('stored') or voice.get('audio_path')))),
-            'voice_summary':({k:voice.get(k) for k in ['duration','energy','pause_ratio','pitch_mean','pitch_variability','baseline_deviation','emotion','stress_score','note'] if voice.get(k) is not None}
+            'voice_summary':({k:voice.get(k) for k in ['duration','energy','pause_ratio','pitch_mean','pitch_variability','baseline_deviation','emotion','stress_score','note','method'] if voice.get(k) is not None}
                              if isinstance(voice,dict) else None),
             'prediction':data.get('prediction'),'assessment_id':data.get('assessment_id',a.id)})
     return list(reversed(items))
@@ -93,6 +99,61 @@ def case_summary(db, case):
             'district_id':district.id,'assigned_to':case.assigned_to,'conditions':case.conditions,
             'scores':latest['scores'] if latest else None,'priority':latest['priority'] if latest else 'Unassessed',
             'trend':latest.get('trend',{}) if latest else {}, 'last_checkin':assessments[-1].created_at if assessments else None}
+
+def _voice_path(session: VoiceSession) -> Path:
+    data = session.data or {}
+    rel = data.get('audio_path')
+    return (STORAGE_PATH / rel) if rel else (STORAGE_PATH / 'voices' / session.case_id / f'{session.id}.wav')
+
+def erase_optional_data(db, user, *, erase_voice=False, erase_checkins=False):
+    """Delete optional wellbeing artifacts for the participant's own cases."""
+    cases = scope(db, user)
+    summary = {'voice_files_removed': 0, 'voice_sessions_redacted': 0, 'checkins_redacted': 0}
+    for case in cases:
+        if erase_voice:
+            for session in rows(db, VoiceSession, case.id):
+                path = _voice_path(session)
+                try:
+                    if path.is_file():
+                        path.unlink()
+                        summary['voice_files_removed'] += 1
+                except OSError:
+                    pass
+                features = list(db.scalars(select(VoiceFeature).where(VoiceFeature.voice_session_id == session.id)))
+                for feature in features:
+                    db.delete(feature)
+                data = dict(session.data or {})
+                data.pop('audio_path', None)
+                data['stored'] = False
+                data['erased_at'] = now().isoformat()
+                data['note'] = 'Recording removed after privacy erasure request'
+                session.data = data
+                summary['voice_sessions_redacted'] += 1
+            for assessment in rows(db, Assessment, case.id):
+                data = dict(assessment.data or {})
+                if data.get('voice') or data.get('voice_session_id'):
+                    data['voice'] = None
+                    data['voice_playable'] = False
+                    data['voice_session_id'] = None
+                    data['voice_erased'] = True
+                    assessment.data = data
+        if erase_checkins:
+            for assessment in rows(db, Assessment, case.id):
+                response = db.scalars(select(AssessmentResponse).where(AssessmentResponse.assessment_id == assessment.id)).first()
+                if response:
+                    response.data = {'responses': (response.data or {}).get('responses') or {}, 'text': '', 'language': (response.data or {}).get('language', 'en'), 'erased_at': now().isoformat()}
+                nlp = db.scalars(select(NLPResult).where(NLPResult.assessment_id == assessment.id)).first()
+                if nlp:
+                    nlp.data = {'sentiment': None, 'emotions': {}, 'signals': {}, 'method': 'erased', 'fallback': True, 'erased_at': now().isoformat()}
+                data = dict(assessment.data or {})
+                data['text_erased'] = True
+                data['sentiment'] = None
+                data['emotions'] = {}
+                data['evidence'] = []
+                data['signals'] = {}
+                assessment.data = data
+                summary['checkins_redacted'] += 1
+    return summary
 
 def submit_assessment(db, user, payload, at=None):
     case = access_case(db,user,payload.case_id)
@@ -150,7 +211,6 @@ def submit_assessment(db, user, payload, at=None):
         recipients.extend(list(db.scalars(select(User).where(User.role=='officer',User.district_id==case.district_id))))
         title=f'{case.id}: {result["priority"]} — human review requested'
     else:
-        # Mild/Low still notify assigned counsellor so new check-ins are visible
         title=f'{case.id}: new check-in ({result["priority"]}) — open case to review'
     seen=set()
     for recipient in recipients:
@@ -186,12 +246,11 @@ def case_detail(db,user,case):
     voice_sessions=[]
     for v in reversed(rows(db,VoiceSession,case.id)):
         data=v.data or {}
-        rel=data.get('audio_path')
-        path=(STORAGE_PATH/rel) if rel else (STORAGE_PATH/'voices'/case.id/f'{v.id}.wav')
-        playable=path.exists()
+        path=_voice_path(v)
+        playable=path.exists() and path.is_file()
         voice_sessions.append({'id':v.id,'at':v.created_at.isoformat(),'playable':playable,
                      'audio_url':f'/ai/voice/{v.id}/audio' if playable else None,
-                     **{k:data.get(k) for k in ['duration','energy','pause_ratio','pitch_mean','pitch_variability','speech_rate','baseline_deviation','emotion','stress_score','note']}})
+                     **{k:data.get(k) for k in ['duration','energy','pause_ratio','pitch_mean','pitch_variability','speech_rate','baseline_deviation','emotion','stress_score','note','method']}})
     effects=[]
     for i in interventions:
         start=i.created_at.replace(tzinfo=None)
