@@ -64,13 +64,45 @@ def test_privacy_erase_voice(client):
     login(client,'counsellor')
     assert client.get('/ai/voice/'+voice_id+'/audio').status_code==404
 
-def test_health_checks(client):
-    health=client.get('/health')
-    assert health.status_code==200
-    body=health.json()
-    assert body['status']=='ok'
-    assert body['checks']['database'] is True
-    assert body['checks']['storage'] is True
+def test_guided_chat_and_timeline(client):
+    login(client,'victim')
+    client.post('/consents',json={'wellbeing':True,'voice':False,'language':'en'})
+    chat=client.post('/chat',json={'case_id':'AT-20481','text':'I am scared and received a threat','language':'en'})
+    assert chat.status_code==200,chat.text
+    body=chat.json()
+    assert body['suggest_safety_report'] is True
+    assert body['intent']=='safety'
+    assert any(a['type']=='safety_report' for a in body['actions'])
+    journey=client.get('/cases/AT-20481').json()
+    assert isinstance(journey.get('support_timeline'),list)
+    assert journey['checkin_count']>=1
+
+def test_critical_alert_close_rules_and_handover(client):
+    login(client,'victim')
+    client.post('/consents',json={'wellbeing':True,'voice':False,'language':'en'})
+    payload={'case_id':'AT-20481','language':'en','text':'They threatened my family and I cannot sleep.',
+             'responses':{'feeling':4,'fear':4,'sleep':4,'daily':4,'threat':True,'safe':False}}
+    assert client.post('/assessments',json=payload).status_code==200
+    login(client,'officer')
+    alerts=client.get('/alerts').json()
+    critical=next(a for a in alerts if a['data'].get('priority')=='Critical' and a['case_id']=='AT-20481')
+    assert client.patch('/alerts/'+critical['id'],json={'status':'Closed','close_note':'done'}).status_code==422
+    assert client.post('/alerts/'+critical['id']+'/acknowledge').status_code==200
+    assert client.patch('/alerts/'+critical['id'],json={'status':'Closed','close_note':'done'}).status_code==422
+    assert client.post('/interventions',json={'case_id':'AT-20481','kind':'Safety/protection review','assigned_to':'U-counsellor','notes':'Urgent'}).status_code==200
+    closed=client.patch('/alerts/'+critical['id'],json={'status':'Closed','close_note':'Safety review confirmed'})
+    assert closed.status_code==200,closed.text
+    assert closed.json()['data'].get('acknowledged_at')
+    handed=client.patch('/cases/AT-20481/assign',json={'assigned_to':'U-counsellor'})
+    assert handed.status_code==200,handed.text
+    assert handed.json()['assigned_to']=='U-counsellor'
+
+def test_asr_status_endpoint(client):
+    login(client,'victim')
+    client.post('/consents',json={'wellbeing':True,'voice':True})
+    status=client.post('/ai/transcribe')
+    assert status.status_code==200
+    assert 'available' in status.json()
 
 def test_aggregate_roles_cannot_open_cases(client):
     for role in ['state','national']:

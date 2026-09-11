@@ -85,11 +85,106 @@ def checkin_rows(db, case_id):
             'prediction':data.get('prediction'),'assessment_id':data.get('assessment_id',a.id)})
     return list(reversed(items))
 
-def notify(db, user_id, title, case_id):
-    from .integrations import MockSMSAdapter, MockNotificationAdapter
-    db.add(Notification(id=uid('N'),user_id=user_id,data={'title':title,'case_id':case_id,
-        'channels':{'in_app':'delivered','email':'simulated','sms':'simulated'},
-        'receipts':[MockSMSAdapter().submit(case_id,'SMS'),MockNotificationAdapter().submit(case_id,'Email')]}))
+def notify(db, user_id, title, case_id, *, priority: str | None = None, body: str | None = None):
+    from .integrations import sms_adapter, email_adapter
+    recipient = db.get(User, user_id)
+    text = body or title
+    email_receipt = email_adapter().submit(
+        case_id, title, to=getattr(recipient, 'email', None), subject=title, body=text, channel='email')
+    sms_receipt = {'status': 'skipped', 'external_delivery': False}
+    if priority in {'High', 'Critical'}:
+        sms_receipt = sms_adapter().submit(case_id, title, to=None, body=text, channel='sms')
+    db.add(Notification(id=uid('N'), user_id=user_id, data={
+        'title': title, 'case_id': case_id, 'priority': priority,
+        'channels': {
+            'in_app': 'delivered',
+            'email': email_receipt.get('status'),
+            'sms': sms_receipt.get('status'),
+        },
+        'receipts': [email_receipt, sms_receipt],
+    }))
+
+
+def participant_timeline(db, case):
+    """Safe participant-facing support story — no scores, notes, or staff identities."""
+    events = []
+    for a in rows(db, Assessment, case.id):
+        events.append({
+            'at': a.created_at.isoformat(),
+            'kind': 'checkin',
+            'title': 'Check-in received',
+            'detail': 'Your support team can review your concerns.',
+        })
+    for s in rows(db, SupportRequest, case.id):
+        events.append({
+            'at': s.created_at.isoformat(),
+            'kind': 'support',
+            'title': f"Support request: {s.data.get('kind', 'Support')}",
+            'detail': f"Status: {s.status}",
+        })
+    for alert in rows(db, Alert, case.id):
+        events.append({
+            'at': alert.created_at.isoformat(),
+            'kind': 'review',
+            'title': 'Human review requested',
+            'detail': f"Status: {alert.status}",
+        })
+        ack = (alert.data or {}).get('acknowledged_at')
+        if ack:
+            events.append({
+                'at': ack,
+                'kind': 'review',
+                'title': 'Support team acknowledged your case',
+                'detail': 'A team member is reviewing next steps.',
+            })
+    for i in rows(db, Intervention, case.id):
+        events.append({
+            'at': i.created_at.isoformat(),
+            'kind': 'intervention',
+            'title': f"Support action: {i.data.get('kind', 'Follow-up')}",
+            'detail': f"Status: {i.status}",
+        })
+        if i.status == 'Completed':
+            events.append({
+                'at': i.created_at.isoformat(),
+                'kind': 'intervention',
+                'title': 'Support action completed',
+                'detail': i.data.get('kind', 'Follow-up'),
+            })
+    for f in rows(db, FollowUp, case.id):
+        events.append({
+            'at': f.created_at.isoformat(),
+            'kind': 'followup',
+            'title': 'Follow-up scheduled',
+            'detail': f"Due {f.due_at.isoformat()} · {f.status}",
+        })
+        if f.status in {'Contacted', 'Completed'}:
+            events.append({
+                'at': f.due_at.isoformat(),
+                'kind': 'followup',
+                'title': f'Follow-up {f.status.lower()}',
+                'detail': 'Your support team recorded contact.',
+            })
+    events.sort(key=lambda e: e['at'])
+    return events
+
+
+def alert_response_minutes(alerts) -> dict:
+    deltas = []
+    for alert in alerts:
+        ack = (alert.data or {}).get('acknowledged_at')
+        if not ack:
+            continue
+        try:
+            start = alert.created_at.replace(tzinfo=None)
+            end = datetime.fromisoformat(ack.replace('Z', '+00:00')).replace(tzinfo=None)
+            deltas.append(max(0, (end - start).total_seconds() / 60))
+        except ValueError:
+            continue
+    if not deltas:
+        return {'avg_minutes': None, 'count': 0, 'note': 'Not enough acknowledgement timing data'}
+    avg = round(sum(deltas) / len(deltas), 1)
+    return {'avg_minutes': avg, 'count': len(deltas), 'note': f'Average {avg} minutes to acknowledge ({len(deltas)} alerts)'}
 
 def case_summary(db, case):
     assessments = rows(db,Assessment,case.id)
@@ -216,7 +311,7 @@ def submit_assessment(db, user, payload, at=None):
     for recipient in recipients:
         if not recipient or recipient.id in seen: continue
         seen.add(recipient.id)
-        notify(db,recipient.id,title,case.id)
+        notify(db,recipient.id,title,case.id,priority=result['priority'],body=title)
     audit(db,user,'create assessment',assessment.id)
     db.commit()
     return result
@@ -239,7 +334,8 @@ def case_detail(db,user,case):
                 'interventions':[{'id':i.id,'kind':i.data['kind'],'status':i.status} for i in interventions],
                 'follow_ups':[{'id':f.id,'due_at':f.due_at,'status':f.status} for f in followups],
                 'support_requests':[{'id':s.id,'kind':s.data['kind'],'status':s.status} for s in supports],
-                'checkin_count':len(rows(db,Assessment,case.id))}
+                'checkin_count':len(rows(db,Assessment,case.id)),
+                'support_timeline':participant_timeline(db,case)}
     assessments=rows(db,Assessment,case.id)
     history=history_for(db,case.id)
     checkins=checkin_rows(db,case.id)
