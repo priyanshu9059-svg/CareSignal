@@ -3,6 +3,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from .database import *
 from .ai import calculate
+from .config import STORAGE_PATH
 
 def uid(prefix):
     return prefix + '-' + uuid.uuid4().hex[:12]
@@ -47,8 +48,36 @@ def serialize(row):
     return {c.name:getattr(row,c.name) for c in row.__table__.columns}
 
 def history_for(db, case_id):
-    return [{'id':a.id,'at':a.created_at.isoformat(), 'score':a.data['scores']['distress'], **a.data['scores'],
-             'priority':a.data['priority']} for a in rows(db,Assessment,case_id)]
+    history=[]
+    for a in rows(db,Assessment,case_id):
+        scores=(a.data or {}).get('scores') or {}
+        distress=scores.get('distress')
+        if distress is None:
+            continue
+        history.append({'id':a.id,'at':a.created_at.isoformat(),'score':distress,**scores,
+                        'priority':(a.data or {}).get('priority','Unassessed'),
+                        'has_voice':bool((a.data or {}).get('voice')),
+                        'sentiment':((a.data or {}).get('sentiment') or {}).get('label')})
+    return history
+
+def checkin_rows(db, case_id):
+    """Staff-facing chronological check-ins including linked voice summary."""
+    items=[]
+    for a in rows(db,Assessment,case_id):
+        data=a.data or {}
+        scores=data.get('scores') or {}
+        voice=data.get('voice')
+        items.append({
+            'id':a.id,'at':a.created_at.isoformat(),'priority':data.get('priority','Unassessed'),
+            'scores':scores,'sentiment':data.get('sentiment'),'emotions':data.get('emotions'),
+            'what_changed':data.get('what_changed') or [],'recommendations':data.get('recommendations') or [],
+            'has_voice':bool(voice),
+            'voice_session_id':data.get('voice_session_id'),
+            'voice_playable':bool(data.get('voice_playable') or (isinstance(voice,dict) and (voice.get('stored') or voice.get('audio_path')))),
+            'voice_summary':({k:voice.get(k) for k in ['duration','energy','pause_ratio','pitch_mean','pitch_variability','baseline_deviation','emotion','stress_score','note'] if voice.get(k) is not None}
+                             if isinstance(voice,dict) else None),
+            'prediction':data.get('prediction'),'assessment_id':data.get('assessment_id',a.id)})
+    return list(reversed(items))
 
 def notify(db, user_id, title, case_id):
     from .integrations import MockSMSAdapter, MockNotificationAdapter
@@ -75,6 +104,9 @@ def submit_assessment(db, user, payload, at=None):
         if not session or session.case_id!=case.id:
             raise HTTPException(422,'Voice session does not belong to this case')
         voice=session.data
+        result_voice_id=payload.voice_session_id
+    else:
+        result_voice_id=None
     timestamp=at or now()
     history=history_for(db,case.id)
     conditions=dict(case.conditions)
@@ -82,6 +114,9 @@ def submit_assessment(db, user, payload, at=None):
         last=datetime.fromisoformat(history[-1]['at']).replace(tzinfo=None)
         conditions['missed_checkins']=max(0,(timestamp.replace(tzinfo=None)-last).days//7-1)
     result=calculate(payload.responses.model_dump(),payload.text,payload.language,history,conditions,timestamp,voice)
+    if result_voice_id:
+        result['voice_session_id']=result_voice_id
+        result['voice_playable']=bool((voice or {}).get('stored') or (voice or {}).get('audio_path'))
     if history:
         previous_response=db.scalars(select(AssessmentResponse).where(AssessmentResponse.assessment_id==history[-1]['id'])).first()
         if previous_response:
@@ -102,16 +137,26 @@ def submit_assessment(db, user, payload, at=None):
                      (BehaviourFeature,{'trend':result['trend'],'baseline':result['baseline']}),
                      (RiskScore,result['scores']),(RiskExplanation,{'items':result['explanation']})]:
         db.add(cls(id=uid('D'),assessment_id=assessment.id,data=data))
+    recipients=[]
+    if case.assigned_to:
+        assigned=db.get(User,case.assigned_to)
+        if assigned: recipients.append(assigned)
     if result['priority'] in ['Moderate','High','Critical']:
         alert=Alert(id=uid('ALT'),case_id=case.id,assigned_to=case.assigned_to,data={
             'assessment_id':assessment.id,'priority':result['priority'],'scores':result['scores'],
             'explanation':result['explanation'],'trigger':result['what_changed'],
-            'recommendations':result['recommendations']})
+            'recommendations':result['recommendations'],'has_voice':bool(voice)})
         db.add(alert)
-        recipients=list(db.scalars(select(User).where(User.role=='officer',User.district_id==case.district_id)))
-        if case.assigned_to: recipients.append(db.get(User,case.assigned_to))
-        for recipient in recipients:
-            notify(db,recipient.id,f'{case.id}: {result["priority"]} — human review requested',case.id)
+        recipients.extend(list(db.scalars(select(User).where(User.role=='officer',User.district_id==case.district_id))))
+        title=f'{case.id}: {result["priority"]} — human review requested'
+    else:
+        # Mild/Low still notify assigned counsellor so new check-ins are visible
+        title=f'{case.id}: new check-in ({result["priority"]}) — open case to review'
+    seen=set()
+    for recipient in recipients:
+        if not recipient or recipient.id in seen: continue
+        seen.add(recipient.id)
+        notify(db,recipient.id,title,case.id)
     audit(db,user,'create assessment',assessment.id)
     db.commit()
     return result
@@ -137,6 +182,16 @@ def case_detail(db,user,case):
                 'checkin_count':len(rows(db,Assessment,case.id))}
     assessments=rows(db,Assessment,case.id)
     history=history_for(db,case.id)
+    checkins=checkin_rows(db,case.id)
+    voice_sessions=[]
+    for v in reversed(rows(db,VoiceSession,case.id)):
+        data=v.data or {}
+        rel=data.get('audio_path')
+        path=(STORAGE_PATH/rel) if rel else (STORAGE_PATH/'voices'/case.id/f'{v.id}.wav')
+        playable=path.exists()
+        voice_sessions.append({'id':v.id,'at':v.created_at.isoformat(),'playable':playable,
+                     'audio_url':f'/ai/voice/{v.id}/audio' if playable else None,
+                     **{k:data.get(k) for k in ['duration','energy','pause_ratio','pitch_mean','pitch_variability','speech_rate','baseline_deviation','emotion','stress_score','note']}})
     effects=[]
     for i in interventions:
         start=i.created_at.replace(tzinfo=None)
@@ -153,7 +208,8 @@ def case_detail(db,user,case):
         before=[h for h in history if datetime.fromisoformat(h['at']).replace(tzinfo=None)<=event.created_at.replace(tzinfo=None)]
         after=[h for h in history if datetime.fromisoformat(h['at']).replace(tzinfo=None)>event.created_at.replace(tzinfo=None)]
         events.append({**serialize(event),'observed_change':after[0]['score']-before[-1]['score'] if before and after else None})
-    return {**summary,'history':history,'latest':assessments[-1].data if assessments else None,
+    return {**summary,'history':history,'checkins':checkins,'voice_sessions':voice_sessions,
+            'latest':assessments[-1].data if assessments else None,
             'events':events,
             'interventions':[serialize(i) for i in interventions], 'follow_ups':[serialize(f) for f in followups],
             'support_requests':[serialize(s) for s in supports], 'effects':effects}

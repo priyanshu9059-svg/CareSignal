@@ -18,6 +18,9 @@ if AI_MODE == 'production' and not os.getenv('JWT_SECRET'):
 COOKIE_SECURE = os.getenv('COOKIE_SECURE', 'false').lower() == 'true'
 DEMO_ENABLED = os.getenv('DEMO_ENABLED', 'true').lower() == 'true' and AI_MODE != 'production'
 MODEL_PATH = Path(os.getenv('MODEL_PATH', str(ROOT / 'ai' / 'models')))
+STORAGE_PATH = Path(os.getenv('STORAGE_PATH', str(ROOT / 'storage')))
+STORAGE_PATH.mkdir(parents=True, exist_ok=True)
+(STORAGE_PATH / 'voices').mkdir(parents=True, exist_ok=True)
 WEIGHTS = {'questionnaire': .25, 'safety': .20, 'nlp': .15, 'trend': .15,
            'sleep': .10, 'engagement': .05, 'voice': .10}
 THRESHOLDS = [(85, 'Critical'), (70, 'High'), (50, 'Moderate'), (30, 'Mild'), (0, 'Low')]

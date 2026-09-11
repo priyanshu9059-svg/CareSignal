@@ -1,7 +1,7 @@
 {
   "version": "synthetic-logistic-v1",
   "dataset_version": "synthetic-26094-v1",
-  "training_date": "2026-09-10T16:20:51.870666+00:00",
+  "training_date": "2026-09-11T15:53:54.491524+00:00",
   "records": 2400,
   "train_people": 120,
   "test_people": 30,

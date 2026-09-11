@@ -71,6 +71,9 @@ def test_end_to_end(client):
     detail=client.get('/cases/AT-20481').json()
     assert detail['latest']['scores']['distress']<assessment['scores']['distress']
     assert detail['latest']['trend']['direction']=='Improving'
+    assert any(c['id']==improved.json()['assessment_id'] for c in detail['checkins'])
+    notes=client.get('/notifications').json()
+    assert any('AT-20481' in (n['data'].get('title') or '') for n in notes)
     for role in ['state','national']:
         login(client,role)
         result=client.get('/dashboard/'+role)
@@ -96,6 +99,14 @@ def test_voice_and_consent(client):
     assert result.json()['baseline'] is not None
     assert len(result.json()['mfccs'])==13
     assert abs(result.json()['pitch_mean']-180)<10
+    assert result.json().get('emotion') is not None or result.json().get('stress_score') is not None
+    assert result.json().get('stored') is True
+    voice_id=result.json()['voice_session_id']
+    login(client,'counsellor')
+    audio=client.get('/ai/voice/'+voice_id+'/audio')
+    assert audio.status_code==200,audio.text
+    assert audio.headers.get('content-type','').startswith('audio/')
+    login(client,'victim')
     assert client.post('/ai/analyze-voice',data={'case_id':'AT-20481'},files={'file':('bad.wav',b'garbage','audio/wav')}).status_code==422
     assert client.post('/ai/transcribe').json()['available'] is False
     client.post('/consents',json={'wellbeing':False,'voice':False})
