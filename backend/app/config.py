@@ -12,9 +12,15 @@ if DATABASE_URL.startswith('postgresql://'):
 AI_MODE = os.getenv('AI_MODE', 'demo')
 if AI_MODE not in {'demo', 'local', 'production'}:
     raise RuntimeError('Invalid AI_MODE')
-JWT_SECRET = os.getenv('JWT_SECRET') or secrets.token_urlsafe(48)
-if AI_MODE == 'production' and not os.getenv('JWT_SECRET'):
-    raise RuntimeError('JWT_SECRET is required in production')
+_jwt = os.getenv('JWT_SECRET')
+_using_postgres = DATABASE_URL.startswith('postgresql')
+if not _jwt:
+    # Ephemeral keys are local-SQLite demo only. Shared/Postgres deploys need a stable secret.
+    if AI_MODE == 'production' or _using_postgres:
+        raise RuntimeError('JWT_SECRET is required for PostgreSQL and production deployments')
+    JWT_SECRET = secrets.token_urlsafe(48)
+else:
+    JWT_SECRET = _jwt
 COOKIE_SECURE = os.getenv('COOKIE_SECURE', 'false').lower() == 'true'
 DEMO_ENABLED = os.getenv('DEMO_ENABLED', 'true').lower() == 'true' and AI_MODE != 'production'
 MODEL_PATH = Path(os.getenv('MODEL_PATH', str(ROOT / 'ai' / 'models')))

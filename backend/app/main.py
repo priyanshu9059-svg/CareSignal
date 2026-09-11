@@ -34,6 +34,14 @@ app=FastAPI(title='CareSignal — SIH 26094',version='1.0.0',lifespan=lifespan)
 requests=defaultdict(deque)
 @app.middleware('http')
 async def security(request:Request,call_next):
+    # Static-export / Render clients call /api/*; Next rewrites already strip the prefix.
+    # Normalize both paths so the same route table works in every deployment mode.
+    path=request.scope.get('path','')
+    if path=='/api' or path.startswith('/api/'):
+        request.scope['path']=path[4:] or '/'
+        request.state.api_prefixed=True
+    else:
+        request.state.api_prefixed=False
     origin=request.headers.get('origin')
     allowed={'http://localhost:3000','http://127.0.0.1:3000'}
     import os
@@ -42,7 +50,7 @@ async def security(request:Request,call_next):
         allowed.add('https://'+os.environ['RENDER_EXTERNAL_HOSTNAME'])
     if request.method not in ['GET','HEAD','OPTIONS'] and origin and origin not in allowed:
         return JSONResponse(status_code=403,content={'detail':'Origin not allowed'})
-    key=(request.client.host if request.client else 'local', 'login' if request.url.path=='/auth/login' else 'api')
+    key=(request.client.host if request.client else 'local', 'login' if request.scope.get('path')=='/auth/login' else 'api')
     queue=requests[key]
     tick=time.monotonic()
     while queue and queue[0]<tick-60: queue.popleft()
@@ -373,7 +381,10 @@ if FRONTEND_OUT.exists():
     app.mount('/_next', StaticFiles(directory=FRONTEND_OUT / '_next'), name='next-static')
 
     @app.get('/{path:path}', include_in_schema=False)
-    def frontend(path: str):
+    def frontend(path: str, request: Request):
+        # After /api prefix stripping, unknown API paths must not fall through to the SPA.
+        if getattr(request.state, 'api_prefixed', False):
+            raise HTTPException(404, 'Not found')
         target = FRONTEND_OUT / path
         if path and target.is_file():
             return FileResponse(target)
