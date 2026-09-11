@@ -8,6 +8,10 @@ services:
     region: singapore
     healthCheckPath: /health
     autoDeployTrigger: commit
+    disk:
+      name: caresignal-storage
+      mountPath: /app/storage
+      sizeGB: 1
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -21,8 +25,12 @@ services:
         value: true
       - key: COOKIE_SECURE
         value: true
+      - key: STORAGE_PATH
+        value: /app/storage
       - key: NEXT_TELEMETRY_DISABLED
         value: "1"
+      # Custom domains: set APP_ORIGIN to the exact https origin (and optional APP_ORIGINS CSV).
+      # RENDER_EXTERNAL_HOSTNAME / RENDER_EXTERNAL_URL are auto-injected by Render.
 
 databases:
   - name: caresignal-db

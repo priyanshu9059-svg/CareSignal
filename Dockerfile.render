@@ -21,5 +21,7 @@ RUN python ai/train.py
 COPY --from=frontend-build /app/frontend/out frontend/out
 COPY render-start.sh /app/render-start.sh
 RUN chmod +x /app/render-start.sh
+ENV STORAGE_PATH=/app/storage
+RUN mkdir -p /app/storage
 EXPOSE 10000
 CMD ["/app/render-start.sh"]

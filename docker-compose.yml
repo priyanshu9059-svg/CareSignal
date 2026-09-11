@@ -23,6 +23,9 @@ services:
       DEMO_ENABLED: ${DEMO_ENABLED:-true}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       APP_ORIGIN: ${APP_ORIGIN:-http://localhost:3000}
+      STORAGE_PATH: /app/storage
+    volumes:
+      - voice_storage:/app/storage
     depends_on:
       postgres:
         condition: service_healthy
@@ -41,3 +44,4 @@ services:
       - 127.0.0.1:3000:3000
 volumes:
   postgres_data:
+  voice_storage:

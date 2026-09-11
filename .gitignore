@@ -22,3 +22,6 @@ CareSignal_Colab_Bundle.zip
 
 
 notebooks/*_executed.ipynb
+
+tsconfig.tsbuildinfo
+*.tsbuildinfo

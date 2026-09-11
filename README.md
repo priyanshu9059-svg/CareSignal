@@ -36,7 +36,7 @@ Docker: set `POSTGRES_PASSWORD` and `JWT_SECRET` in `.env`, then run:
 docker compose up --build
 ```
 
-The compose stack includes frontend, backend, and PostgreSQL. Rate limiting is process-local; this prototype runs synchronously. Docker is not required for the SQLite development path. See [DEPLOYMENT.md](DEPLOYMENT.md).
+The compose stack includes frontend, backend, and PostgreSQL with a persistent voice storage volume. Rate limiting is process-local; this prototype runs synchronously. Demo seeding is skipped when `DEMO_ENABLED=false`. Docker is not required for the SQLite development path. See [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ### Public Render deployment
 

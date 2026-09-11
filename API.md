@@ -2,7 +2,9 @@
 
 Interactive, generated contracts: `http://127.0.0.1:8000/docs`; machine-readable OpenAPI: `/openapi.json`. Browser requests use `/api` on the Next.js origin. Dates are ISO 8601; client-facing times use the browser locale. Errors use `{ "detail": "message" }` (Pydantic validation can return a structured list).
 
-Authentication: `POST /auth/login` with `{email,password}` sets an HttpOnly, SameSite=Strict JWT cookie for eight hours. `POST /auth/logout` clears the browser cookie. `GET /me` returns the user's role and latest consent. Bearer tokens are accepted for programmatic clients, but login does not expose the token to frontend JavaScript. `POST /auth/register` is system-admin-only and creates the linked victim identity when appropriate.
+Authentication: `POST /auth/login` with `{email,password}` sets an HttpOnly, SameSite=Strict JWT cookie for eight hours. `POST /auth/logout` clears the browser cookie and revokes the JWT `jti` until expiry. `GET /me` returns the user's role and latest consent. Bearer tokens are accepted for programmatic clients, but login does not expose the token to frontend JavaScript. `POST /auth/register` is system-admin-only and creates the linked victim identity when appropriate.
+
+Consent: `POST /consents` accepts `{wellbeing, voice, language, erase_voice?, erase_checkins?}`. Optional erase flags remove stored WAVs and/or redact free-text when withdrawing. `POST /privacy/erase` performs erasure without changing consent. `GET /health` reports database and storage checks.
 
 | Routes | Authorization / behavior |
 |---|---|
