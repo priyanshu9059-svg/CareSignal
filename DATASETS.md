@@ -2,6 +2,19 @@
 
 Only generated synthetic records and short authored examples are included. Third-party data is optional and is neither downloaded automatically nor redistributed. Review current terms on each provider page, obtain any required authorization, and keep an access/license record before placing files under `data/raw/<dataset>/`.
 
+**Thorough fit analysis, published metrics, and upgrade priorities:** see [DATASET_ANALYSIS.md](DATASET_ANALYSIS.md).
+
+Optional local training (after you place processed JSONL/CSV):
+
+```powershell
+python ai/train_text.py --bootstrap
+python ai/train_text.py data/processed/sentimix.jsonl --bootstrap
+python ai/train_voice_proxy.py --bootstrap
+python ai/train_voice_proxy.py data/processed/crema_features.csv
+```
+
+Artifacts write to `ai/models/text_sentiment.json` and `ai/models/voice_emotion.json`. The API loads them automatically when present.
+
 | Source | Intended research use |
 |---|---|
 | [SentiMix / SemEval-2020 Task 9](https://aclanthology.org/2020.semeval-1.100/) | Hinglish code-mixed sentiment and language identification |

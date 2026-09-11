@@ -12,5 +12,13 @@ frontend/playwright-report/
 *.log
 data/raw/*
 !data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
 storage/
 Microsoft/
+CareSignal_Colab_Bundle.zip
+*.zip
+!frontend/public/**/*.zip
+
+
+notebooks/*_executed.ipynb

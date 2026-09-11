@@ -14,7 +14,7 @@ from .auth import current_user, roles, token, hash_password, verify_password
 from .schemas import *
 from .services import *
 from .ai import analyze_text, audio_features
-from .config import COOKIE_SECURE, DEMO_ENABLED, MODEL_PATH, AI_MODE
+from .config import COOKIE_SECURE, DEMO_ENABLED, MODEL_PATH, AI_MODE, STORAGE_PATH
 
 logger=logging.getLogger('caresignal')
 @asynccontextmanager
@@ -208,9 +208,32 @@ async def voice(case_id:str=Form(...),transcript:str=Form(''),file:UploadFile=Fi
     features['baseline']=baseline
     features['baseline_note']='Supporting deviation from first three recordings' if baseline else 'At least three earlier recordings are needed for a personal baseline'
     row=VoiceSession(id=uid('VOICE'),case_id=case_id,data=features)
-    db.add(row); db.flush(); db.add(VoiceFeature(id=uid('VF'),voice_session_id=row.id,data=features))
+    db.add(row); db.flush()
+    # Persist WAV so authorized staff can replay the recording
+    voice_dir=STORAGE_PATH/'voices'/case_id
+    voice_dir.mkdir(parents=True,exist_ok=True)
+    audio_path=voice_dir/f'{row.id}.wav'
+    audio_path.write_bytes(raw)
+    features={**features,'stored':True,'audio_path':str(audio_path.relative_to(STORAGE_PATH)).replace('\\','/')}
+    row.data=features
+    db.add(VoiceFeature(id=uid('VF'),voice_session_id=row.id,data=features))
     audit(db,user,'create voice features',row.id); db.commit()
     return {'voice_session_id':row.id,**features}
+
+@app.get('/ai/voice/{voice_id}/audio')
+def voice_audio(voice_id:str,user:User=Depends(roles('officer','counsellor','admin')),db:Session=Depends(get_db)):
+    item=db.get(VoiceSession,voice_id)
+    if not item: raise HTTPException(404,'Voice session not found')
+    access_case(db,user,item.case_id)
+    rel=(item.data or {}).get('audio_path')
+    path=(STORAGE_PATH/rel) if rel else (STORAGE_PATH/'voices'/item.case_id/f'{item.id}.wav')
+    if not path.exists() or not path.is_file():
+        raise HTTPException(404,'Recording file is not available (older sessions may only store acoustic features)')
+    # Prevent path escape
+    try: path.resolve().relative_to(STORAGE_PATH.resolve())
+    except ValueError: raise HTTPException(404,'Recording file is not available')
+    audit(db,user,'play voice recording',item.id); db.commit()
+    return FileResponse(path, media_type='audio/wav', filename=f'{item.id}.wav')
 
 @app.post('/ai/transcribe')
 def transcribe(user:User=Depends(roles('victim')),db:Session=Depends(get_db)):
@@ -309,7 +332,14 @@ def support(body:SupportInput,user:User=Depends(roles('victim')),db:Session=Depe
     db.add(item)
     if body.kind=='Safety concern':
         db.add(Alert(id=uid('ALT'),case_id=case.id,assigned_to=case.assigned_to,data={'priority':'High','trigger':[{'factor':'Direct safety support request','source':'Self-reported'}], 'recommendations':['Safety/protection review'],'explanation':[]}))
-    for staff in db.scalars(select(User).where(User.role=='officer',User.district_id==case.district_id)):
+    recipients=list(db.scalars(select(User).where(User.role=='officer',User.district_id==case.district_id)))
+    if case.assigned_to:
+        assigned=db.get(User,case.assigned_to)
+        if assigned: recipients.append(assigned)
+    seen=set()
+    for staff in recipients:
+        if not staff or staff.id in seen: continue
+        seen.add(staff.id)
         notify(db,staff.id,body.kind+' requested',case.id)
     audit(db,user,'request support',item.id); db.commit()
     return serialize(item)

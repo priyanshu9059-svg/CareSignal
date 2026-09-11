@@ -1,0 +1,17 @@
+{
+  "version": "tfidf-logistic-v3-kaggle",
+  "macro_f1_holdout": 0.7993643040844934,
+  "n_train": 433847,
+  "n_test": 144616,
+  "classes": [
+    "anger",
+    "fear",
+    "joy",
+    "negative",
+    "neutral",
+    "positive",
+    "sadness"
+  ],
+  "limitations": "Trained on supplied/bootstrap corpus; domain shift expected vs real victim narratives. Not clinical.",
+  "training_date": "2026-09-11T16:31:50.923132+00:00"
+}

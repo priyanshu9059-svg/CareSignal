@@ -1,0 +1,15 @@
+{
+  "version": "voice-linear-v1",
+  "macro_f1_holdout": 0.8991079951285343,
+  "classes": [
+    "anger",
+    "fear",
+    "joy",
+    "neutral",
+    "sadness"
+  ],
+  "n_train": 300,
+  "n_test": 100,
+  "limitations": "Acoustic proxy; if trained on acted SER (CREMA/RAVDESS/TESS) expect domain shift on victim speech. Not clinical.",
+  "training_date": "2026-09-11T15:55:14.761642+00:00"
+}
