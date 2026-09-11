@@ -40,6 +40,6 @@ Assessment example:
 
 Scale values are 0–4, with greater values indicating more difficulty. Null means skipped. All-skipped submissions are rejected. Voice session IDs must belong to the same case. Unknown fields are rejected. Participant submission returns an assessment ID, support recommendations and detected concern labels, not an alarming score dashboard. Authorized staff can retrieve full scores, evidence and trends.
 
-Voice accepts at most 10 MB, 90 seconds, 8–48 kHz, 16-bit PCM WAV. Invalid recordings return 422 and do not invalidate text. Acoustic features are stored; source recordings are discarded.
+Voice accepts at most 10 MB, 90 seconds, 8–48 kHz, 16-bit PCM WAV. Invalid recordings return 422 and do not invalidate text. Acoustic features and the source WAV are stored under `STORAGE_PATH` so authorized staff can replay via `GET /ai/voice/{id}/audio` (also available under `/api/...` on static/Render deploys). Responses may include a disclosed heuristic emotion/stress proxy when models or acoustics allow.
 
 Framework references: [FastAPI security](https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/) and [Next.js rewrites](https://nextjs.org/docs/app/api-reference/config/next-config-js/rewrites).

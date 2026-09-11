@@ -4,7 +4,7 @@ AI-assisted wellbeing monitoring and human-led support for fictional atrocity-ca
 
 ## Run locally on Windows
 
-Python 3.11+ and Node 24 are used. The existing root HTML/CSS/JS files are retained as the original visual reference; the working app is in `frontend/` and `backend/`.
+Python 3.11+ and Node 24 are used. The working app is in `frontend/` and `backend/`. Original static HTML/CSS/JS lives under `legacy/` as a visual reference only — do not open it to run the application.
 
 ```powershell
 python -m venv .venv
@@ -24,11 +24,11 @@ npm ci
 npm run dev
 ```
 
-Open **http://127.0.0.1:3000**. API docs: **http://127.0.0.1:8000/docs**. The frontend proxies `/api/*` to FastAPI, keeping authentication cookies on the same origin. Do not open `index.html` to run the new application.
+Open **http://127.0.0.1:3000**. API docs: **http://127.0.0.1:8000/docs**. The frontend proxies `/api/*` to FastAPI, keeping authentication cookies on the same origin. Do not open files under `legacy/` to run the application.
 
 ## Database and environment
 
-With no environment variables, local development uses `backend/demo.db` (SQLite) and a random, process-local JWT key. Restarting the backend invalidates sessions unless you configure a persistent key. Copy `.env.example` to `.env` and set a long random `JWT_SECRET` for persistence. `DATABASE_URL` accepts PostgreSQL through the `postgresql+psycopg://` driver. The Docker deployment uses PostgreSQL. Never check `.env` or real data into source control.
+With no environment variables, local development uses `backend/demo.db` (SQLite) and a random, process-local JWT key. Restarting the backend invalidates sessions unless you configure a persistent key. Copy `.env.example` to `.env` and set a long random `JWT_SECRET` for persistence. PostgreSQL deployments require `JWT_SECRET`. `DATABASE_URL` accepts PostgreSQL through the `postgresql+psycopg://` driver. The Docker deployment uses PostgreSQL. Never check `.env` or real data into source control.
 
 Docker: set `POSTGRES_PASSWORD` and `JWT_SECRET` in `.env`, then run:
 
@@ -36,7 +36,7 @@ Docker: set `POSTGRES_PASSWORD` and `JWT_SECRET` in `.env`, then run:
 docker compose up --build
 ```
 
-The compose stack includes frontend, backend, PostgreSQL and Redis. Redis is reserved for future distributed queues; this prototype runs synchronously with process-local rate limiting. Docker is not required for the SQLite development path. See [DEPLOYMENT.md](DEPLOYMENT.md).
+The compose stack includes frontend, backend, and PostgreSQL. Rate limiting is process-local; this prototype runs synchronously. Docker is not required for the SQLite development path. See [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ### Public Render deployment
 
@@ -90,6 +90,6 @@ Next.js / React / TypeScript / Tailwind, Recharts, Leaflet, Lucide → same-orig
 
 ## Limitations and future scope
 
-This implementation has no clinical validation. Text emotion intensities are heuristic; no pretrained emotion model or speech emotion classifier is bundled. Voice emotion is returned as unavailable; acoustic measurements are real. Speech recognition depends on browser support; server ASR returns an explicit fallback message. Model accuracy on synthetic data does not establish effectiveness on people. Missing inputs are excluded and weights renormalized. Demo outcomes are observational and do not prove treatment effects.
+This implementation has no clinical validation. Text emotion intensities are heuristic. Voice returns a disclosed acoustic emotion/stress proxy when available (optional `voice_emotion.json`), not a validated speech-emotion classifier. Speech recognition depends on browser support; server ASR returns an explicit fallback message. Model accuracy on synthetic data does not establish effectiveness on people. Missing inputs are excluded and weights renormalized. Demo outcomes are observational and do not prove treatment effects.
 
-District maps need internet for OpenStreetMap tiles. Voice raw bytes are processed in memory and discarded; features persist. No real SMS, email, NHAA, legal, or protection action is performed. State/national pages have no row-level case access. Operational hardening, representative multilingual evaluation, calibrated confidence, distributed rate limits, field retention/deletion policies, real ASR, accessibility audits, and government integrations remain future work. The installable manifest/offline page is a minimal PWA shell; check-ins require connectivity and are never silently queued offline.
+District maps need internet for OpenStreetMap tiles. Optional voice check-ins store acoustic features and the WAV under `storage/voices/` for authorized staff playback. No real SMS, email, NHAA, legal, or protection action is performed. State/national pages have no row-level case access. Operational hardening, representative multilingual evaluation, calibrated confidence, distributed rate limits, field retention/deletion policies, real ASR, accessibility audits, and government integrations remain future work. The installable manifest/offline page is a minimal PWA shell; check-ins require connectivity and are never silently queued offline.

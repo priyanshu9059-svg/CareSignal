@@ -34,6 +34,26 @@ def test_auth_and_scope(client):
     assert client.post('/auth/register',json={'email':'x@y.com','password':'abcdefghij','name':'X','role':'admin'}).status_code==403
     assert client.post('/consents',json={'wellbeing':True},headers={'Origin':'https://evil.example'}).status_code==403
 
+def test_api_prefix_parity(client):
+    """Static-export / Render clients call /api/*; middleware must strip the prefix."""
+    bad=client.post('/api/auth/login',json={'email':'victim@demo.com','password':'wrong'})
+    assert bad.status_code==401
+    ok=client.post('/api/auth/login',json={'email':'victim@demo.com','password':'Demo@123'})
+    assert ok.status_code==200,ok.text
+    me=client.get('/api/me')
+    assert me.status_code==200 and me.json()['role']=='victim'
+    missing=client.get('/api/this-route-does-not-exist')
+    assert missing.status_code==404
+    assert missing.headers.get('content-type','').startswith('application/json')
+
+def test_aggregate_roles_cannot_open_cases(client):
+    for role in ['state','national']:
+        login(client,role)
+        assert client.get('/cases').status_code==403
+        assert client.get('/cases/AT-20481').status_code==403
+        assert client.get('/alerts').status_code==403
+        assert client.post('/interventions',json={'case_id':'AT-20481','kind':'Counselling','assigned_to':'U-counsellor'}).status_code==403
+
 def test_end_to_end(client):
     login(client,'victim')
     payload={'case_id':'AT-20481','language':'hinglish','text':'Mujhe bahut darr lag raha hai. Mere bhai ko dhamki di. Court jaane se dar lag raha hai. Neend nahi aati.',
